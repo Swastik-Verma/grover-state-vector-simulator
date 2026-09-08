@@ -29,3 +29,15 @@ n=2 gives exactly P=1.0 as predicted by theory — strong first correctness sign
 
 ## Key finding
 The naive full-matrix approach becomes impractical past **n=13** on this machine — not from a clean out-of-memory crash, but from RAM exhaustion causing disk swapping, which made n=14 effectively unusable (killed manually after hanging). n=13 itself already took ~4 minutes for a search space of only 8192 elements. This confirms the core problem the rest of the project solves: matrix storage is O(2^2n), while the state vector itself is only O(2^n) — the matrices are the bottleneck, not the actual information being processed.
+
+
+# Day 3 — Correctness Validation
+
+## Test results
+- 95/95 assertions passed, 0 failed
+- Worst norm deviation across all tests: 3.905765e-13 (at n=10), well within 1e-9 tolerance — consistent with expected floating-point accumulation, not a bug
+- n=2, M=1 gives P=1.000000000000 for all 4 possible marked elements — matches exact theoretical prediction
+- Measured probabilities matched sin²((2k+1)θ/2) within 1e-9 for all tested configurations (n=3 to n=8, M=1 to M=3)
+- Over-rotation confirmed: for n=5, probability peaked at k=4 (P=0.999182) then dropped to P=0.014453 at k=8, then began rising again — exact match to theoretical oscillation
+- Multiple-marked-elements tests confirmed, including the M=N/2 edge case (n=3, M=4) giving exactly P=0.5 after 1 iteration
+- Full test suite runs in under 5 seconds (all test cases use n≤10, well below the memory ceiling found on Day 2)

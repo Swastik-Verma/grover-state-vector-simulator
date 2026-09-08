@@ -11,3 +11,8 @@ target_include_directories(grover PRIVATE include)
 # Test executable
 add_executable(test_basic tests/test_basic.cpp)
 target_include_directories(test_basic PRIVATE include)
+
+
+# Correctness test suite (Day 3)
+add_executable(test_correctness tests/test_correctness.cpp)
+target_include_directories(test_correctness PRIVATE include)

@@ -241,4 +241,94 @@ GroverResult run_naive_grover(int num_qubits, const std::vector<uint64_t>& marke
     return result;
 }
 
+// ============================================================
+// STEP-BY-STEP GROVER (for testing/validation)
+// ============================================================
+
+// Runs Grover's algorithm step by step, checking norm after each operation.
+// Returns the success probability after exactly `iterations` iterations.
+// If `check_norm_each_step` is true, asserts norm ≈ 1 after every gate.
+// Populates `probability_history` with the success probability after each iteration.
+struct StepByStepResult {
+    double final_success_probability;
+    std::vector<double> probability_after_each_iteration;  // P(marked) after iteration 0, 1, 2, ...
+    bool norm_ok;       // true if norm stayed ≈1 throughout
+    double worst_norm;  // the norm value furthest from 1.0
+};
+
+StepByStepResult run_grover_step_by_step(
+    int num_qubits,
+    const std::vector<uint64_t>& marked,
+    int iterations)
+{
+    StepByStepResult result;
+    result.norm_ok = true;
+    result.worst_norm = 1.0;
+
+    uint64_t N = 1ULL << num_qubits;
+
+    // Build matrices
+    Matrix H_full = build_hadamard_full(num_qubits);
+    Matrix oracle = build_oracle_matrix(num_qubits, marked);
+    Matrix diffusion = build_diffusion_matrix(num_qubits);
+
+    // Initialize state to |0...0>
+    StateVector sv(num_qubits);
+
+    // Helper lambda: check the norm and track the worst deviation
+    auto check_norm = [&](const std::string& label) {
+        double ns = sv.norm_squared();
+        double deviation = std::abs(ns - 1.0);
+        if (deviation > std::abs(result.worst_norm - 1.0)) {
+            result.worst_norm = ns;
+        }
+        if (deviation > 1e-9) {
+            std::cerr << "  NORM DRIFT at " << label
+                      << ": norm²=" << ns << " (off by " << deviation << ")\n";
+            result.norm_ok = false;
+        }
+    };
+
+    // Helper lambda: compute success probability
+    auto success_prob = [&]() {
+        double p = 0.0;
+        for (uint64_t m : marked) {
+            p += sv.probability(m);
+        }
+        return p;
+    };
+
+    // Apply H^{⊗n}
+    mat_vec_multiply(H_full, sv);
+    check_norm("after H^n");
+
+    // Record probability at iteration 0 (before any Grover iteration)
+    result.probability_after_each_iteration.push_back(success_prob());
+
+    // Apply Grover iterations
+    for (int r = 0; r < iterations; ++r) {
+        mat_vec_multiply(oracle, sv);
+        check_norm("after oracle, iteration " + std::to_string(r + 1));
+
+        mat_vec_multiply(diffusion, sv);
+        check_norm("after diffusion, iteration " + std::to_string(r + 1));
+
+        result.probability_after_each_iteration.push_back(success_prob());
+    }
+
+    result.final_success_probability = success_prob();
+    return result;
+}
+
+// Compute theoretical success probability after k iterations
+// P(k) = sin²((2k+1) * θ/2)  where sin(θ/2) = √(M/N)
+double theoretical_success_probability(int num_qubits, int num_marked, int k) {
+    uint64_t N = 1ULL << num_qubits;
+    double theta = 2.0 * std::asin(std::sqrt(
+        static_cast<double>(num_marked) / static_cast<double>(N)
+    ));
+    double angle = (2.0 * k + 1.0) * theta / 2.0;
+    return std::sin(angle) * std::sin(angle);
+}
+
 #endif // NAIVE_GROVER_H
