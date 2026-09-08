@@ -85,3 +85,32 @@ The optimized Hadamard alone now comfortably runs at n=22 (4M+ amplitudes) in ~4
 
 ## Key finding
 Eliminating the H^{⊗n} matrix via in-place bit-pair gate application gives up to a **547.9x speedup** at n=12 and removes the memory ceiling entirely for this component — naive dies from OOM at n=13, while the optimized version scales past n=22 with no matrix ever allocated. This is the single highest-impact optimization in the project so far.
+
+
+
+# Day 5 — Zero-Matrix Optimization Results
+
+## Correctness validation
+- 62/62 test assertions passed, 0 failed
+- Optimized oracle matches naive oracle matrix exactly (diff=0.0) for n=2 to 10
+- Optimized diffusion matches naive diffusion matrix within ~1e-16 for n=2 to 10
+- Full optimized Grover (zero matrices) matches full naive Grover within 1e-13 for n=2 to 10
+- Optimized results match theoretical P(k)=sin²((2k+1)θ/2) within 5e-14 across all tested n, M
+- Predicate-based oracle matches set-based oracle exactly (diff=0.0)
+- Structured oracles (oracle_bit_set, oracle_hamming_weight) verified correct and match theory
+- Norm preserved (worst deviation 1.6e-11 at n=15) across n=2 to 15
+
+## Scaling results (zero-matrix optimized Grover)
+
+| n  | N         | R    | Total (s) | Per iter (s) | P_success |
+|----|-----------|------|-----------|---------------|-----------|
+| 5  | 32        | 4    | 0.0000    | 0.000010      | 0.999182  |
+| 10 | 1,024     | 25   | 0.0010    | 0.000041      | 0.999461  |
+| 15 | 32,768    | 142  | 0.1104    | 0.000778      | 0.999987  |
+| 18 | 262,144   | 402  | 2.4844    | 0.006180      | 0.999998  |
+| 20 | 1,048,576 | 804  | 17.3547   | 0.021586      | 1.000000  |
+| 22 | 4,194,304 | 1608 | 144.3165  | 0.089749      | 1.000000  |
+| 24 | 16,777,216| 3216 | 1037.5697 | 0.322627      | 1.000000  |
+
+## Key finding
+Zero matrices anywhere in the codebase now. Memory usage is O(2^n) — just the state vector. Successfully scaled to n=24 (16.7M amplitudes) on an 8 GB machine, compared to naive's hard ceiling at n=13. Time complexity confirmed O(N^1.5): per-iteration time and total time both scale consistently with theory as n increases.

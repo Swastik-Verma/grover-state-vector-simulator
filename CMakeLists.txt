@@ -20,3 +20,8 @@ target_include_directories(test_correctness PRIVATE include)
 # Optimized gates test (Day 4)
 add_executable(test_optimized_gates tests/test_optimized_gates.cpp)
 target_include_directories(test_optimized_gates PRIVATE include)
+
+
+# Day 5 optimized Grover test
+add_executable(test_day5_optimized tests/test_day5_optimized.cpp)
+target_include_directories(test_day5_optimized PRIVATE include)

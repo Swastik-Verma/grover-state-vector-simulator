@@ -115,4 +115,222 @@ void apply_hadamard_all(StateVector& sv) {
     }
 }
 
+// ============================================================
+// OPTIMIZED ORACLE (IN-PLACE, NO MATRIX)
+// ============================================================
+//
+// The oracle flips the sign of marked elements:
+//   amplitude[x] *= -1  if is_marked(x)
+//
+// Two interfaces:
+//   1. Predicate-based (general): takes a function bool(uint64_t)
+//   2. Set-based (convenience): takes a vector of marked indices
+//
+// The predicate interface is the general one — it supports any
+// oracle, including structured oracles where "is_marked" is a
+// computation (e.g., "does this index encode a valid long path
+// in a graph?"), not just a lookup in a precomputed set.
+
+// Predicate-based oracle: the most general form
+void apply_oracle_predicate(StateVector& sv,
+                            const std::function<bool(uint64_t)>& is_marked) {
+    uint64_t N = sv.dimension();
+    for (uint64_t x = 0; x < N; ++x) {
+        if (is_marked(x)) {
+            sv[x] = -sv[x];
+        }
+    }
+}
+
+// Set-based oracle: convenience wrapper for known marked indices
+void apply_oracle_set(StateVector& sv, const std::vector<uint64_t>& marked) {
+    for (uint64_t m : marked) {
+        sv[m] = -sv[m];
+    }
+}
+
+// ============================================================
+// OPTIMIZED DIFFUSION (IN-PLACE, NO MATRIX)
+// ============================================================
+//
+// D = 2|ψ⟩⟨ψ| - I performs inversion about the mean:
+//   α'_i = -α_i + 2 * mean(α)
+//
+// Implementation:
+//   Pass 1: compute sum of all amplitudes → mean = sum / N
+//   Pass 2: for each i, α_i → -α_i + 2·mean
+//
+// Time: O(N).  Extra memory: O(1) (just one Complex for the sum).
+//
+// Note on numerical precision:
+// Summing N complex numbers accumulates rounding error of roughly
+// O(√N · ε) where ε ≈ 2.2e-16 (double machine epsilon). For
+// N = 2^25 (~33M), this gives ~1.3e-12 error, which is acceptable.
+// If higher precision were needed, Kahan compensated summation
+// could be used — it reduces error to O(ε) regardless of N, at
+// the cost of 4 extra floating-point ops per addition. For our
+// use case, naive summation is sufficient (verified by tests).
+
+void apply_diffusion(StateVector& sv) {
+    uint64_t N = sv.dimension();
+
+    // Pass 1: compute sum of all amplitudes
+    Complex sum(0.0, 0.0);
+    for (uint64_t i = 0; i < N; ++i) {
+        sum += sv[i];
+    }
+
+    // mean = sum / N
+    Complex two_mean = sum * Complex(2.0 / static_cast<double>(N), 0.0);
+
+    // Pass 2: inversion about the mean
+    // α'_i = -α_i + 2·mean = -(α_i - 2·mean) = 2·mean - α_i
+    for (uint64_t i = 0; i < N; ++i) {
+        sv[i] = two_mean - sv[i];
+    }
+}
+
+// ============================================================
+// COMPLETE OPTIMIZED GROVER RUNNER (ZERO MATRICES)
+// ============================================================
+//
+// This is the fully optimized Grover simulator:
+//   - H^{⊗n} via in-place single-qubit gates (Day 4)
+//   - Oracle via predicate/set (no matrix)
+//   - Diffusion via inversion-about-mean (no matrix)
+//
+// Total memory: just the state vector (16 bytes × 2^n)
+// Time per iteration: O(N) for oracle + O(N) for diffusion + O(n·N) for H = O(n·N)
+// Total time: O(R · n · N) where R ≈ (π/4)·√N
+
+struct OptimizedGroverResult {
+    int num_qubits;
+    int num_iterations;
+    double success_probability;
+    double total_time_seconds;
+    double time_per_iteration;
+};
+
+// Version with set of marked indices
+OptimizedGroverResult run_optimized_grover(
+    int num_qubits,
+    const std::vector<uint64_t>& marked,
+    int iterations = -1)
+{
+    OptimizedGroverResult result;
+    result.num_qubits = num_qubits;
+
+    uint64_t N = 1ULL << num_qubits;
+    int M = marked.size();
+
+    if (iterations < 0) {
+        iterations = compute_optimal_iterations(num_qubits, M);
+    }
+    result.num_iterations = iterations;
+
+    // Initialize state to |0...0>
+    StateVector sv(num_qubits);
+
+    result.total_time_seconds = Timer::measure([&]() {
+        // Step 1: Apply H^{⊗n} to get uniform superposition
+        apply_hadamard_all(sv);
+
+        // Step 2: Grover iterations
+        for (int r = 0; r < iterations; ++r) {
+            // Oracle: flip marked elements
+            apply_oracle_set(sv, marked);
+
+            // Diffusion: inversion about the mean
+            apply_diffusion(sv);
+        }
+    });
+
+    result.time_per_iteration = (iterations > 0)
+        ? result.total_time_seconds / iterations
+        : 0.0;
+
+    // Compute success probability
+    result.success_probability = 0.0;
+    for (uint64_t m : marked) {
+        result.success_probability += sv.probability(m);
+    }
+
+    return result;
+}
+
+// Version with predicate oracle (for future research use)
+OptimizedGroverResult run_optimized_grover_predicate(
+    int num_qubits,
+    const std::function<bool(uint64_t)>& is_marked,
+    int num_marked,
+    int iterations = -1)
+{
+    OptimizedGroverResult result;
+    result.num_qubits = num_qubits;
+
+    uint64_t N = 1ULL << num_qubits;
+
+    if (iterations < 0) {
+        iterations = compute_optimal_iterations(num_qubits, num_marked);
+    }
+    result.num_iterations = iterations;
+
+    StateVector sv(num_qubits);
+
+    result.total_time_seconds = Timer::measure([&]() {
+        apply_hadamard_all(sv);
+
+        for (int r = 0; r < iterations; ++r) {
+            apply_oracle_predicate(sv, is_marked);
+            apply_diffusion(sv);
+        }
+    });
+
+    result.time_per_iteration = (iterations > 0)
+        ? result.total_time_seconds / iterations
+        : 0.0;
+
+    // Can't easily compute success probability without knowing
+    // which indices are marked — caller should check
+    result.success_probability = -1.0;  // sentinel: not computed
+
+    return result;
+}
+
+// ============================================================
+// EXAMPLE STRUCTURED ORACLES
+// ============================================================
+// These demonstrate how different "problems" plug into the
+// predicate interface. Each is just a function bool(uint64_t).
+
+// Oracle 1: Single marked index (the basic case)
+std::function<bool(uint64_t)> oracle_single_index(uint64_t target) {
+    return [target](uint64_t x) { return x == target; };
+}
+
+// Oracle 2: All indices where bit k is set
+// "Find an element with property: bit k = 1"
+std::function<bool(uint64_t)> oracle_bit_set(int bit_position) {
+    return [bit_position](uint64_t x) {
+        return (x >> bit_position) & 1;
+    };
+}
+
+// Oracle 3: All indices where the number of set bits is exactly k
+// "Find an element with exactly k bits set" (Hamming weight)
+std::function<bool(uint64_t)> oracle_hamming_weight(int target_weight) {
+    return [target_weight](uint64_t x) {
+        return __builtin_popcountll(x) == target_weight;
+    };
+}
+
+// Oracle 4: Indices in a given range [lo, hi)
+// "Find an element in the range"
+std::function<bool(uint64_t)> oracle_range(uint64_t lo, uint64_t hi) {
+    return [lo, hi](uint64_t x) {
+        return x >= lo && x < hi;
+    };
+}
+
+
 #endif // OPTIMIZED_GATES_H
