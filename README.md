@@ -9,6 +9,7 @@ Currently in active development (Phase 1 — Foundation).
 - [x] Day 1: Project setup, CMake build system, StateVector class
 - [x] Day 2: Naive full-matrix baseline implementation
 - [x] Day 3: Correctness validation suite
+- [x] Day 4: In-place single-qubit gates (eliminated H⊗ⁿ matrix)
 - [ ] Days 4–5: Matrix-free optimizations (in-place gates, O(N) diffusion)
 - [ ] Days 6–9: Performance engineering (OpenMP, cache optimization, precision tuning)
 - [ ] Days 10–12: Cross-validation, benchmarks, documentation

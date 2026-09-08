@@ -16,3 +16,7 @@ target_include_directories(test_basic PRIVATE include)
 # Correctness test suite (Day 3)
 add_executable(test_correctness tests/test_correctness.cpp)
 target_include_directories(test_correctness PRIVATE include)
+
+# Optimized gates test (Day 4)
+add_executable(test_optimized_gates tests/test_optimized_gates.cpp)
+target_include_directories(test_optimized_gates PRIVATE include)
