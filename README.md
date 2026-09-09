@@ -12,6 +12,7 @@ Currently in active development (Phase 1 — Foundation).
 - [x] Day 4: In-place single-qubit gates (eliminated H⊗ⁿ matrix)
 - [x] Day 5: Opt 2 & 3 — O(N) diffusion, on-the-fly oracle (zero matrices in codebase)
 - [x] Day 6: Scaling test and first benchmark — 7249.8x speedup at n=12, scaled to n=24
+- [x] Day 7: Opt 4 — OpenMP parallelism (up to 2.02x speedup on 4 cores, memory-bandwidth-bound)
 - [ ] Days 4–5: Matrix-free optimizations (in-place gates, O(N) diffusion)
 - [ ] Days 6–9: Performance engineering (OpenMP, cache optimization, precision tuning)
 - [ ] Days 10–12: Cross-validation, benchmarks, documentation
@@ -51,4 +52,5 @@ This test suite is the reference every subsequent optimization is checked agains
 - Zero matrices anywhere in the codebase as of Day 5 — oracle and diffusion both implemented as O(N) in-place operations, validated against the naive matrix versions and exact theory
 - Scaled to n=24 (16.7M amplitudes, ~1000s runtime) on 8 GB RAM, versus naive's ceiling of n=13
 
+- Parallel (OpenMP) implementation validated against theory and against Day 3's over-rotation regression test — no correctness issues from multi-threading
 

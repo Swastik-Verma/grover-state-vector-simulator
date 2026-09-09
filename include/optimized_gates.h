@@ -7,6 +7,7 @@
 #include <cmath>
 #include <functional>
 #include <array>
+#include <omp.h>
 
 using Complex = std::complex<double>;
 
@@ -39,6 +40,7 @@ void apply_single_qubit_gate(StateVector& sv, int target, const Gate2x2& gate) {
     uint64_t step = 1ULL << target;       // 2^target
     uint64_t low_mask = step - 1;          // bits below target: 0...01...1
 
+    #pragma omp parallel for schedule(static)
     for (uint64_t k = 0; k < num_pairs; ++k) {
         // Construct index i with bit `target` = 0
         // Lower bits: k & low_mask (the bits of k below position target)
@@ -135,6 +137,8 @@ void apply_hadamard_all(StateVector& sv) {
 void apply_oracle_predicate(StateVector& sv,
                             const std::function<bool(uint64_t)>& is_marked) {
     uint64_t N = sv.dimension();
+
+    #pragma omp parallel for schedule(static)
     for (uint64_t x = 0; x < N; ++x) {
         if (is_marked(x)) {
             sv[x] = -sv[x];
@@ -174,17 +178,21 @@ void apply_oracle_set(StateVector& sv, const std::vector<uint64_t>& marked) {
 void apply_diffusion(StateVector& sv) {
     uint64_t N = sv.dimension();
 
-    // Pass 1: compute sum of all amplitudes
-    Complex sum(0.0, 0.0);
+    // Pass 1: compute sum of all amplitudes (reduction)
+    double sum_real = 0.0;
+    double sum_imag = 0.0;
+
+    #pragma omp parallel for reduction(+:sum_real,sum_imag) schedule(static)
     for (uint64_t i = 0; i < N; ++i) {
-        sum += sv[i];
+        sum_real += sv[i].real();
+        sum_imag += sv[i].imag();
     }
 
-    // mean = sum / N
-    Complex two_mean = sum * Complex(2.0 / static_cast<double>(N), 0.0);
+    Complex two_mean = Complex(2.0 * sum_real / static_cast<double>(N),
+                               2.0 * sum_imag / static_cast<double>(N));
 
     // Pass 2: inversion about the mean
-    // α'_i = -α_i + 2·mean = -(α_i - 2·mean) = 2·mean - α_i
+    #pragma omp parallel for schedule(static)
     for (uint64_t i = 0; i < N; ++i) {
         sv[i] = two_mean - sv[i];
     }

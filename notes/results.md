@@ -166,3 +166,44 @@ Zero matrices anywhere in the codebase now. Memory usage is O(2^n) — just the 
 - Speedup naive → optimized at n=12: 7249.8x
 - Peak memory at n=24: 256 MB (vs naive's theoretical 6 TB for the same n)
 - CSV data saved in benchmarks/ for Day 11 plotting
+
+
+
+
+# Day 7 — OpenMP Parallelism Results
+
+## Machine
+- 4 CPU cores (`nproc` = 4)
+
+## Correctness validation
+- 30/30 test assertions passed, 0 failed
+- Parallel Grover matches theoretical P(k) within 3e-12 for n=2 to 14, M=1 to 3
+- Norm preserved (worst deviation 5.4e-11 at n=18) across n=2 to 18
+- Day 3 over-rotation regression test still passes — parallelism introduced no correctness issues
+
+## Thread scaling (n=20, 50 iterations)
+
+| Threads | Time (s) | Speedup | Efficiency | P_success |
+|---------|----------|---------|------------|-----------|
+| 1       | 3.2946   | 1.00x   | 100.0%     | 0.009697  |
+| 2       | 2.1345   | 1.54x   | 77.2%      | 0.009697  |
+| 3       | 1.7072   | 1.93x   | 64.3%      | 0.009697  |
+| 4       | 1.6305   | 2.02x   | 50.5%      | 0.009697  |
+
+Sub-linear scaling (2.02x on 4 cores, not 4x) — expected for this workload, since diffusion and oracle passes are memory-bandwidth-bound rather than compute-bound. All 4 cores compete for the same memory bus, so speedup plateaus well before core count. This is a legitimate, explainable result, not a bug.
+
+## Full scaling with 4 threads (n=10 to 24)
+
+| n  | N          | R    | Total (s) | Per iter (s) | P_success |
+|----|------------|------|-----------|---------------|-----------|
+| 14 | 16,384     | 100  | 0.0316    | 0.000316      | 1.000000  |
+| 16 | 65,536     | 201  | 0.2186    | 0.001088      | 0.999988  |
+| 18 | 262,144    | 402  | 2.1945    | 0.005459      | 0.999998  |
+| 20 | 1,048,576  | 804  | 17.2009   | 0.021394      | 1.000000  |
+| 22 | 4,194,304  | 1608 | 102.0970  | 0.063493      | 1.000000  |
+| 24 | 16,777,216 | 3216 | 910.4505  | 0.283100      | 1.000000  |
+
+Comparing to Day 6's serial n=24 result (1508.15s) vs this parallel n=24 result (910.45s): **1.66x speedup** from OpenMP at n=24, consistent with the memory-bandwidth-bound scaling pattern seen in the thread benchmark.
+
+## Key finding
+OpenMP parallelism gives up to 2.02x speedup on 4 cores at n=20, and 1.66x at n=24 in full-run comparison. Scaling is sub-linear because both diffusion (reduction + update) and oracle/gate passes are memory-bandwidth-bound, not compute-bound — a well-understood limitation for this class of algorithm on multi-core CPUs, and the exact reason Day 8's cache optimization is a meaningful next step.
