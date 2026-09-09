@@ -25,3 +25,7 @@ target_include_directories(test_optimized_gates PRIVATE include)
 # Day 5 optimized Grover test
 add_executable(test_day5_optimized tests/test_day5_optimized.cpp)
 target_include_directories(test_day5_optimized PRIVATE include)
+
+# Benchmark (Day 6)
+add_executable(benchmark benchmarks/benchmark.cpp)
+target_include_directories(benchmark PRIVATE include)

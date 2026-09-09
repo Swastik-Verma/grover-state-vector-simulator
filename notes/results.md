@@ -114,3 +114,55 @@ Eliminating the H^{⊗n} matrix via in-place bit-pair gate application gives up 
 
 ## Key finding
 Zero matrices anywhere in the codebase now. Memory usage is O(2^n) — just the state vector. Successfully scaled to n=24 (16.7M amplitudes) on an 8 GB machine, compared to naive's hard ceiling at n=13. Time complexity confirmed O(N^1.5): per-iteration time and total time both scale consistently with theory as n increases.
+
+
+
+# Day 6 — Scaling Test and First Benchmark
+
+## Naive vs Optimized comparison (n=3 to 13)
+
+| n  | N     | R  | Naive (s) | Optimized (s) | Speedup  | P_naive  | P_opt    |
+|----|-------|----|-----------|-----------------|----------|----------|----------|
+| 3  | 8     | 2  | 0.0000    | 0.0000          | 9.2x     | 0.945312 | 0.945312 |
+| 4  | 16    | 3  | 0.0001    | 0.0000          | 18.2x    | 0.961319 | 0.961319 |
+| 5  | 32    | 4  | 0.0005    | 0.0000          | 33.1x    | 0.999182 | 0.999182 |
+| 6  | 64    | 6  | 0.0023    | 0.0000          | 61.2x    | 0.996586 | 0.996586 |
+| 7  | 128   | 8  | 0.0062    | 0.0000          | 130.6x   | 0.995620 | 0.995620 |
+| 8  | 256   | 12 | 0.0416    | 0.0002          | 186.7x   | 0.999947 | 0.999947 |
+| 9  | 512   | 17 | 0.2277    | 0.0006          | 362.6x   | 0.999448 | 0.999448 |
+| 10 | 1024  | 25 | 1.2990    | 0.0008          | 1612.0x  | 0.999461 | 0.999461 |
+| 11 | 2048  | 35 | 7.7605    | 0.0027          | 2894.1x  | 0.999997 | 0.999997 |
+| 12 | 4096  | 50 | 40.1600   | 0.0055          | 7249.8x  | 0.999945 | 0.999945 |
+| 13 | 8192  | 71 | OOM       | 0.0172          | —        | (naive cannot run) | 0.999916 |
+
+## Optimized-only scaling (n=10 to 24)
+
+| n  | N          | R    | Total (s) | Per iter (s) | Memory (MB) | P_success |
+|----|------------|------|-----------|---------------|-------------|-----------|
+| 14 | 16,384     | 100  | 0.0379    | 0.000379      | 0.25        | 1.000000  |
+| 16 | 65,536     | 201  | 0.2906    | 0.001446      | 1.00        | 0.999988  |
+| 18 | 262,144    | 402  | 2.4698    | 0.006144      | 4.00        | 0.999998  |
+| 20 | 1,048,576  | 804  | 17.6305   | 0.021928      | 16.00       | 1.000000  |
+| 22 | 4,194,304  | 1608 | 139.2013  | 0.086568      | 64.00       | 1.000000  |
+| 23 | 8,388,608  | 2274 | 451.7614  | 0.198664      | 128.00      | 1.000000  |
+| 24 | 16,777,216 | 3216 | 1508.1480 | 0.468951      | 256.00      | 1.000000  |
+
+## Memory comparison (computed, naive vs optimized)
+
+| n  | Naive matrices | Optimized | Reduction |
+|----|-----------------|-----------|-----------|
+| 10 | 48 MB           | 0.02 MB   | 3,072x    |
+| 12 | 768 MB          | 0.06 MB   | 12,288x   |
+| 13 | 3 GB            | 0.12 MB   | 24,576x   |
+| 15 | 12 GB           | 0.5 MB    | 98,304x   |
+| 18 | 96 GB           | 4 MB      | 786,432x  |
+| 20 | 384 GB          | 16 MB     | 3,145,728x|
+| 22 | 1536 GB         | 64 MB     | 12,582,912x |
+| 24 | 6144 GB         | 256 MB    | 50,331,648x |
+
+## Key numbers for CV
+- Max n (naive): 12 (dies at n=13 from OOM)
+- Max n (optimized, fp64) tested: 24 (16.7M amplitudes, 256 MB, ~25 minutes runtime)
+- Speedup naive → optimized at n=12: 7249.8x
+- Peak memory at n=24: 256 MB (vs naive's theoretical 6 TB for the same n)
+- CSV data saved in benchmarks/ for Day 11 plotting
