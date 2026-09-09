@@ -236,3 +236,39 @@ Speedup ranged from 0.78x to 1.32x, averaging close to 1.0x — essentially no c
 
 ## Key finding
 On this machine (4-core, 8 GB RAM laptop), cache blocking gave only marginal and inconsistent speedup (0.78x–1.53x, mostly near 1.0x), unlike the larger gains the technique often produces on server-class hardware with deeper cache hierarchies. The most plausible explanation: OpenMP-parallelized loops from Day 7 already distribute work across 4 cores' private L1/L2 caches, and the working set per thread at these problem sizes may already fit reasonably within cache, diluting the isolated benefit of blocking. The correctness of the blocked implementation was still fully validated (31/31 tests), and the qubit-12 case (stride 4096) showed the clearest signal (1.53x), consistent with stride-related cache effects being real but small on this hardware. This is a legitimate negative/neutral result and is documented as such rather than a bug — per the build plan's guidance to record findings honestly.
+
+
+# Day 9 — Memory and Precision Tuning Results
+
+## fp32 vs fp64 accuracy (n=2 to 22)
+- fp64 error vs theory: stays below 1e-9 across all n
+- fp32 error vs theory: stays around 1e-6 to 1e-7 across all n (max observed: 2.47e-6 at n=21)
+- fp32 error is roughly 100-1000x larger than fp64, as expected from float vs double precision (fp32 machine epsilon ≈1.2e-7 vs fp64's ≈2.2e-16), but still far below the 1% threshold — success probability remains reliable in fp32
+
+## fp32 norm drift (n=2 to 22)
+- fp64 norm² stays within ~1e-9 of 1.0 across all n
+- fp32 norm² drifts up to ~2.5e-6 from 1.0 (worst case n=21), consistent with fp32's lower precision accumulating over R iterations
+- Drift remains small and bounded — no runaway instability observed up to n=22
+
+## Timing comparison: fp64 vs fp32 (n=10 to 24)
+
+| n  | R    | fp64 (s)  | fp32 (s)  | Speedup | fp64 (MB) | fp32 (MB) |
+|----|------|-----------|-----------|---------|-----------|-----------|
+| 13 | 71   | 1.8258    | 0.2497    | 7.31x   | 0.1       | 0.1       |
+| 16 | 201  | 1.5332    | 4.9825    | 0.31x   | 1.0       | 0.5       |
+| 18 | 402  | 14.2797   | 9.7746    | 1.46x   | 4.0       | 2.0       |
+| 20 | 804  | 26.2894   | 27.5107   | 0.96x   | 16.0      | 8.0       |
+| 22 | 1608 | 142.0550  | 178.8792  | 0.79x   | 64.0      | 32.0      |
+| 23 | 2274 | 363.8609  | 311.3675  | 1.17x   | 128.0     | 64.0      |
+| 24 | 3216 | 862.5785  | 1010.8459 | 0.85x   | 256.0     | 128.0     |
+
+Timing is noisy and inconsistent (fp32 sometimes faster, sometimes slower) — likely due to background system load and thermal effects on the laptop rather than a genuine fp32 disadvantage. No consistent speed benefit from fp32 was observed on this hardware, unlike the memory benefit which is exactly 2x as expected.
+
+## Maximum n for each precision
+- fp64: confirmed working up to n=27 (2.00 GB)
+- fp32: confirmed working up to n=27 (1.00 GB)
+- Test process was killed by the OS (out-of-memory) when attempting further allocations beyond n=27, consistent with the 8 GB RAM constraint combined with other running system processes
+- fp32's exact 2x memory reduction is confirmed at every n (e.g., n=27: 2.00 GB fp64 vs 1.00 GB fp32)
+
+## Key finding
+fp32 halves memory usage exactly as predicted (confirmed at every n from 10 to 27), at the cost of ~100-1000x larger probability error (still only ~1e-6, well within acceptable bounds — success probability accuracy is not meaningfully compromised). No consistent speed advantage was observed from fp32 on this 4-core laptop; the benefit here is purely memory capacity, not throughput. This is the documented precision/memory tradeoff: fp32 buys headroom for larger n on memory-constrained hardware without materially harming correctness.

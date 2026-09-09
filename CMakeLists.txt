@@ -43,3 +43,9 @@ target_link_libraries(test_day7_openmp PRIVATE OpenMP::OpenMP_CXX)
 add_executable(test_day8_cache tests/test_day8_cache.cpp)
 target_include_directories(test_day8_cache PRIVATE include)
 target_link_libraries(test_day8_cache PRIVATE OpenMP::OpenMP_CXX)
+
+
+# Day 9 precision test
+add_executable(test_day9_precision tests/test_day9_precision.cpp)
+target_include_directories(test_day9_precision PRIVATE include)
+target_link_libraries(test_day9_precision PRIVATE OpenMP::OpenMP_CXX)
