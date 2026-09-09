@@ -309,3 +309,19 @@ block_size_tuning, cache_qubit_timing, fp32_norm_drift, fp32_vs_fp64_accuracy, f
 
 ## Key finding
 The full benchmark story is now visually documented and reproducible via a single script (`benchmarks/generate_plots.py`) run against saved CSV data. These plots are ready to drop directly into the Day 12 README.
+
+
+
+# Day 12 — Documentation and Finalization
+
+## Completed
+- Comprehensive README with algorithm explanation (linear algebra only, no physics), optimization story, benchmark results, correctness methodology, build instructions, and project structure
+- GitHub Actions CI configured (build + run 4 test suites on every push)
+- .gitignore finalized
+- All 12 days committed with meaningful messages
+
+## CV bullets (with measured numbers)
+- Built a C++ Grover's algorithm state-vector simulator from scratch; optimized from O(2²ⁿ) naive baseline to O(2ⁿ) zero-matrix implementation, achieving a 7,250x speedup at n=12
+- Parallelized with OpenMP (2.02x on 4 cores); implemented fp32 precision variant halving memory to support larger problem sizes
+- Validated against exact theoretical results (95+ assertions, 7 test categories) and IBM's Qiskit Aer simulator for n ≤ 12
+- Scaled to 2²⁴ amplitudes (~16.8M) on an 8 GB machine; documented the full optimization pipeline with benchmark plots and CSV data
