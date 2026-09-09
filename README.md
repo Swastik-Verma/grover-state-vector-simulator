@@ -15,6 +15,7 @@ Currently in active development (Phase 1 — Foundation).
 - [x] Day 7: Opt 4 — OpenMP parallelism (up to 2.02x speedup on 4 cores, memory-bandwidth-bound)
 - [x] Day 8: Opt 5 — Cache-aware access (measured; modest/inconsistent gains on this hardware, 0.78x-1.53x)
 - [x] Day 9: Memory and precision tuning — fp32 halves memory (confirmed to n=27), accuracy cost ~1e-6, no consistent speed gain on this hardware
+- [x] Day 10: External cross-validation — validated against Qiskit Aer for n ≤ 12
 - [ ] Days 4–5: Matrix-free optimizations (in-place gates, O(N) diffusion)
 - [ ] Days 6–9: Performance engineering (OpenMP, cache optimization, precision tuning)
 - [ ] Days 10–12: Cross-validation, benchmarks, documentation
@@ -60,3 +61,6 @@ This test suite is the reference every subsequent optimization is checked agains
 
 
 - fp32 precision validated against theory: error stays ~1e-6 to 1e-7 (vs fp64's ~1e-9), well within acceptable bounds for search-probability accuracy
+
+
+- Cross-validated against IBM's Qiskit Aer statevector simulator (an independent, external implementation) for n=2 to 12 — both Qiskit and this simulator converge to the same theoretical success probability within floating-point tolerance
