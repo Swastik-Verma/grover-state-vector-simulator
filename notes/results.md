@@ -288,3 +288,24 @@ Since both Qiskit's Aer simulator and this project's C++ simulator (Days 5/9) in
 
 ## Key finding
 Max n cross-validated against Qiskit: 12 (Qiskit's statevector method becomes impractically slow beyond this on typical hardware, consistent with the build plan's expected range of ~18-20 as an upper bound before diminishing returns — 12 was sufficient to establish full agreement given both simulators already match closed-form theory independently).
+
+
+
+
+# Day 11 — Benchmark Suite and Plots
+
+## Plots generated
+All 6 plots created successfully in `benchmarks/plots/`:
+1. `runtime_naive_vs_optimized.png` — naive vs optimized runtime, log scale, shows naive's OOM cutoff around n=12-13
+2. `thread_scaling.png` — OpenMP speedup vs thread count (measured vs ideal linear), n=20
+3. `memory_comparison.png` — naive matrix memory vs optimized state-vector memory, log scale, with 8 GB RAM line marked
+4. `theory_vs_measured.png` — measured success probability vs theoretical sin²((2k+1)θ/2) curve, n=5, showing over-rotation oscillation
+5. `speedup_growth.png` — speedup factor (naive/optimized) vs n, annotated with max speedup point
+6. `precision_fp32_vs_fp64.png` — fp32 vs fp64 error growth vs n, with machine epsilon reference lines
+
+## Data sources
+All 11 CSV files from Days 6-10 present and consolidated in `benchmarks/`:
+block_size_tuning, cache_qubit_timing, fp32_norm_drift, fp32_vs_fp64_accuracy, fp32_vs_fp64_timing, hadamard_blocked_timing, memory_comparison, naive_vs_optimized, optimized_scaling, parallel_scaling, thread_scaling.
+
+## Key finding
+The full benchmark story is now visually documented and reproducible via a single script (`benchmarks/generate_plots.py`) run against saved CSV data. These plots are ready to drop directly into the Day 12 README.
