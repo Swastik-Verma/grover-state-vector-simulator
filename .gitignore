@@ -1,7 +1,8 @@
 build/
+qiskit-env/
 *.o
 *.out
 .vscode/
 .idea/
 *.swp
-qiskit-env/
+__pycache__/
