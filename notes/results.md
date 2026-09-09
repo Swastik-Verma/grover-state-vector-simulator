@@ -207,3 +207,32 @@ Comparing to Day 6's serial n=24 result (1508.15s) vs this parallel n=24 result 
 
 ## Key finding
 OpenMP parallelism gives up to 2.02x speedup on 4 cores at n=20, and 1.66x at n=24 in full-run comparison. Scaling is sub-linear because both diffusion (reduction + update) and oracle/gate passes are memory-bandwidth-bound, not compute-bound — a well-understood limitation for this class of algorithm on multi-core CPUs, and the exact reason Day 8's cache optimization is a meaningful next step.
+
+
+
+# Day 8 — Cache-Aware Access Results
+
+## Correctness validation
+- 31/31 test assertions passed, 0 failed
+- Blocked gate implementation matches original exactly (diff=0.0) for n=2 to 18
+- Full Grover with blocked gates matches original to within 2.3e-13 for n=5 to 18
+- No regressions in success probability vs theory
+
+## Gate time vs qubit index (n=22, before blocking)
+
+| Qubit | Stride    | Original (s) | Blocked (s) | Speedup |
+|-------|-----------|---------------|-------------|---------|
+| 0     | 1         | 0.083197      | 0.086475    | 0.96x   |
+| 6     | 64        | 0.085051      | 0.071682    | 1.19x   |
+| 12    | 4096      | 0.122198      | 0.079811    | 1.53x   |
+| 14    | 16384     | 0.095546      | 0.074113    | 1.29x   |
+| 20    | 1,048,576 | 0.070647      | 0.069634    | 1.01x   |
+
+## Block size tuning (qubit 20, stride ~1M, at n=22)
+Best block size: 512–1024, giving ~0.0697–0.0700s (best: 512 at 0.069961s). Very flat curve — block size had minimal impact.
+
+## Full H^{⊗n} timing: original vs blocked (n=12 to 24)
+Speedup ranged from 0.78x to 1.32x, averaging close to 1.0x — essentially no consistent improvement.
+
+## Key finding
+On this machine (4-core, 8 GB RAM laptop), cache blocking gave only marginal and inconsistent speedup (0.78x–1.53x, mostly near 1.0x), unlike the larger gains the technique often produces on server-class hardware with deeper cache hierarchies. The most plausible explanation: OpenMP-parallelized loops from Day 7 already distribute work across 4 cores' private L1/L2 caches, and the working set per thread at these problem sizes may already fit reasonably within cache, diluting the isolated benefit of blocking. The correctness of the blocked implementation was still fully validated (31/31 tests), and the qubit-12 case (stride 4096) showed the clearest signal (1.53x), consistent with stride-related cache effects being real but small on this hardware. This is a legitimate negative/neutral result and is documented as such rather than a bug — per the build plan's guidance to record findings honestly.

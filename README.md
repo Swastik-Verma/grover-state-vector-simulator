@@ -13,6 +13,7 @@ Currently in active development (Phase 1 — Foundation).
 - [x] Day 5: Opt 2 & 3 — O(N) diffusion, on-the-fly oracle (zero matrices in codebase)
 - [x] Day 6: Scaling test and first benchmark — 7249.8x speedup at n=12, scaled to n=24
 - [x] Day 7: Opt 4 — OpenMP parallelism (up to 2.02x speedup on 4 cores, memory-bandwidth-bound)
+- [x] Day 8: Opt 5 — Cache-aware access (measured; modest/inconsistent gains on this hardware, 0.78x-1.53x)
 - [ ] Days 4–5: Matrix-free optimizations (in-place gates, O(N) diffusion)
 - [ ] Days 6–9: Performance engineering (OpenMP, cache optimization, precision tuning)
 - [ ] Days 10–12: Cross-validation, benchmarks, documentation
@@ -54,3 +55,4 @@ This test suite is the reference every subsequent optimization is checked agains
 
 - Parallel (OpenMP) implementation validated against theory and against Day 3's over-rotation regression test — no correctness issues from multi-threading
 
+- Cache-blocked gate implementation validated bit-exact against the original for n=2 to 18; full Grover runs match to within 2.3e-13

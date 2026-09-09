@@ -37,3 +37,9 @@ target_link_libraries(benchmark PRIVATE OpenMP::OpenMP_CXX)
 add_executable(test_day7_openmp tests/test_day7_openmp.cpp)
 target_include_directories(test_day7_openmp PRIVATE include)
 target_link_libraries(test_day7_openmp PRIVATE OpenMP::OpenMP_CXX)
+
+
+# Day 8 cache test
+add_executable(test_day8_cache tests/test_day8_cache.cpp)
+target_include_directories(test_day8_cache PRIVATE include)
+target_link_libraries(test_day8_cache PRIVATE OpenMP::OpenMP_CXX)
